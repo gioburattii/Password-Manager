@@ -1,0 +1,24 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules per Password Manager
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Regole per le immagini delle password degli utenti
+    match /users/{userId}/password_images/{imageId} {
+      // Permetti lettura e scrittura solo al proprietario
+      allow read, write: if request.auth != null 
+                       && request.auth.uid == userId;
+      
+      // Limiti per l'upload
+      allow write: if request.resource.size < 1 * 1024 * 1024  // Max 1MB
+                && request.resource.contentType.matches('image/.*')  // Solo immagini
+                && request.auth != null 
+                && request.auth.uid == userId;
+    }
+    
+    // Nega tutto il resto
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+} 
