@@ -1,1 +1,9 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"password-manager-app-b9e66","appId":"1:383840777707:android:503ccdaed5b1a20e3b15ae","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"password-manager-app-b9e66","appId":"1:383840777707:ios:96a8cb28359d961d3b15ae","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"macos":{"default":{"projectId":"password-manager-app-b9e66","appId":"1:383840777707:ios:96a8cb28359d961d3b15ae","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"password-manager-app-b9e66","configurations":{"android":"1:383840777707:android:503ccdaed5b1a20e3b15ae","ios":"1:383840777707:ios:96a8cb28359d961d3b15ae","macos":"1:383840777707:ios:96a8cb28359d961d3b15ae","web":"1:383840777707:web:15c962b70042690a3b15ae","windows":"1:383840777707:web:15c962b70042690a3b15ae"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

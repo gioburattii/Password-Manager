@@ -32,7 +32,7 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!isValid) return;
     _formKey.currentState?.save();
 
-    setState(() => isLoading = true);
+    if (mounted) setState(() => isLoading = true);
 
     try {
       UserCredential userCredential;
@@ -67,7 +67,7 @@ class _AuthScreenState extends State<AuthScreen> {
         SnackBar(content: Text('Errore: ${e.toString()}')),
       );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -76,7 +76,7 @@ class _AuthScreenState extends State<AuthScreen> {
       Future<void> _signInWithGoogle() async {
     if (isLoading) return;
     
-    setState(() => isLoading = true);
+    if (mounted) setState(() => isLoading = true);
     
     try {
       print('Starting Google Sign-In...');
@@ -115,9 +115,12 @@ class _AuthScreenState extends State<AuthScreen> {
         }
         
       } else {
-        print('Mobile platform detected');
+        print('Mobile/Desktop platform detected');
+        
+        // Per macOS e mobile, usa GoogleSignIn
         final googleSignIn = GoogleSignIn(
           scopes: ['email', 'profile'],
+          clientId: '383840777707-d98q725stdvtfqqe7se51pbcqadpstpi.apps.googleusercontent.com', // iOS/macOS client ID
         );
         
         // Assicurati di fare logout prima
@@ -186,6 +189,8 @@ class _AuthScreenState extends State<AuthScreen> {
         errorMessage = 'Troppi tentativi. Attendi qualche minuto e riprova.';
       } else if (e.toString().contains('auth/operation-not-allowed')) {
         errorMessage = 'Login Google non configurato correttamente.';
+      } else if (e.toString().contains('client_id')) {
+        errorMessage = 'Configurazione Google non valida. Contatta il supporto.';
       }
       
       if (mounted) {
@@ -237,9 +242,9 @@ class _AuthScreenState extends State<AuthScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF6366F1),
-              Color(0xFF8B5CF6),
-              Color(0xFFA855F7),
+              Color(0xFFE0E7FF), // Viola molto tenue
+              Color(0xFFFCE7F3), // Fuchsia molto tenue
+              Color(0xFFDBEAFE), // Blu molto tenue
             ],
           ),
         ),
@@ -250,55 +255,82 @@ class _AuthScreenState extends State<AuthScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo e titolo
+                  // Logo e titolo professionale
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(
-                      Icons.security,
-                      size: 60,
-                      color: Colors.white,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFF8B5CF6), // Viola
+                            Color(0xFFEC4899), // Fuchsia
+                            Color(0xFF3B82F6), // Blu
+                          ],
+                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                      ),
+                      child: const Icon(
+                        Icons.security,
+                        size: 24,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
                   Text(
                     'Password Manager',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF8B5CF6),
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 1.5,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    isLogin ? 'Bentornato!' : 'Crea il tuo account',
+                    isLogin ? 'Accesso sicuro al tuo account' : 'Registrazione nuovo account',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withOpacity(0.9),
+                      color: const Color(0xFF6B7280),
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                   const SizedBox(height: 40),
                   
-                  // Card del form
+                  // Card del form professionale
                   Card(
-                    elevation: 20,
-                    shadowColor: Colors.black.withOpacity(0.3),
+                    elevation: 8,
+                    shadowColor: Colors.black.withOpacity(0.15),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Container(
                       width: double.infinity,
                       constraints: const BoxConstraints(maxWidth: 400),
-                      padding: const EdgeInsets.all(32),
+                      padding: const EdgeInsets.all(40),
                       child: Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              isLogin ? 'Accedi' : 'Registrati',
-                              style: Theme.of(context).textTheme.headlineMedium,
+                              isLogin ? 'Login' : 'Registrazione',
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF1F2937),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              isLogin ? 'Inserisci le tue credenziali' : 'Compila tutti i campi richiesti',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: const Color(0xFF6B7280),
+                              ),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 32),
@@ -368,15 +400,16 @@ class _AuthScreenState extends State<AuthScreen> {
                             ),
                             const SizedBox(height: 32),
                             
-                            // Pulsanti
+                            // Pulsante principale
                             ElevatedButton(
                               onPressed: isLoading ? null : _submit,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF6366F1),
+                                backgroundColor: const Color(0xFF8B5CF6),
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(vertical: 18),
+                                elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
                               child: isLoading 
@@ -392,20 +425,23 @@ class _AuthScreenState extends State<AuthScreen> {
                                     isLogin ? 'Accedi' : 'Registrati',
                                     style: const TextStyle(
                                       fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.5,
                                     ),
                                   ),
                             ),
                             const SizedBox(height: 16),
                             
                             TextButton(
-                              onPressed: isLoading ? null : () => setState(() => isLogin = !isLogin),
+                              onPressed: isLoading ? null : () {
+                                if (mounted) setState(() => isLogin = !isLogin);
+                              },
                               child: Text(
                                 isLogin
                                     ? 'Non hai un account? Registrati'
                                     : 'Hai già un account? Accedi',
                                 style: TextStyle(
-                                  color: const Color(0xFF6366F1),
+                                  color: const Color(0xFF8B5CF6),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),

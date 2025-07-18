@@ -47,7 +47,6 @@ class DefaultFirebaseOptions {
     projectId: 'password-manager-app-b9e66',
     authDomain: 'password-manager-app-b9e66.firebaseapp.com',
     storageBucket: 'password-manager-app-b9e66.firebasestorage.app',
-    androidClientId: '383840777707-40tf7slc81t081eho1l0oo56aplsrrql.apps.googleusercontent.com',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -56,7 +55,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '383840777707',
     projectId: 'password-manager-app-b9e66',
     storageBucket: 'password-manager-app-b9e66.firebasestorage.app',
-    androidClientId: '383840777707-40tf7slc81t081eho1l0oo56aplsrrql.apps.googleusercontent.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -65,6 +63,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '383840777707',
     projectId: 'password-manager-app-b9e66',
     storageBucket: 'password-manager-app-b9e66.firebasestorage.app',
+    androidClientId: '383840777707-a40m2l009h3cidnn9728gc7f3i7o9uj0.apps.googleusercontent.com',
     iosClientId: '383840777707-d98q725stdvtfqqe7se51pbcqadpstpi.apps.googleusercontent.com',
     iosBundleId: 'com.example.passwordManager',
   );
@@ -75,6 +74,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '383840777707',
     projectId: 'password-manager-app-b9e66',
     storageBucket: 'password-manager-app-b9e66.firebasestorage.app',
+    androidClientId: '383840777707-a40m2l009h3cidnn9728gc7f3i7o9uj0.apps.googleusercontent.com',
     iosClientId: '383840777707-d98q725stdvtfqqe7se51pbcqadpstpi.apps.googleusercontent.com',
     iosBundleId: 'com.example.passwordManager',
   );
@@ -87,4 +87,5 @@ class DefaultFirebaseOptions {
     authDomain: 'password-manager-app-b9e66.firebaseapp.com',
     storageBucket: 'password-manager-app-b9e66.firebasestorage.app',
   );
+
 }

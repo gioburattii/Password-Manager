@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Manager - Icon Generator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #8B5CF6;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .icon-preview {
+            width: 120px;
+            height: 120px;
+            margin: 20px auto;
+            border-radius: 24px;
+            background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 50%, #3B82F6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .icon-preview::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            animation: shine 3s infinite;
+        }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        
+        .icon-inner {
+            font-size: 48px;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1;
+        }
+        
+        .download-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+        }
+        
+        .description {
+            color: #6B7280;
+            line-height: 1.6;
+            margin: 20px 0;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .feature {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #8B5CF6;
+        }
+        
+        .feature h3 {
+            color: #8B5CF6;
+            margin: 0 0 10px 0;
+        }
+        
+        .feature p {
+            color: #6B7280;
+            margin: 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Password Manager</h1>
+        
+        <div class="icon-preview">
+            <div class="icon-inner">🔑</div>
+        </div>
+        
+        <p class="description">
+            Il nuovo logo rappresenta la sicurezza e la modernità della tua app Password Manager, 
+            con un design elegante che combina i colori viola, rosa e blu del tema e un simbolo bianco della chiave.
+        </p>
+        
+        <div class="download-section">
+            <h3>Scarica il nuovo logo</h3>
+            <button class="download-btn" onclick="downloadIcon(192)">Icona 192x192</button>
+            <button class="download-btn" onclick="downloadIcon(512)">Icona 512x512</button>
+            <button class="download-btn" onclick="downloadIcon(1024)">Icona 1024x1024</button>
+        </div>
+        
+        <div class="features">
+            <div class="feature">
+                <h3>🎨 Design Moderno</h3>
+                <p>Gradiente elegante con colori coordinati al tema dell'app</p>
+            </div>
+            <div class="feature">
+                <h3>🔑 Simbolo Bianco</h3>
+                <p>Chiave di sicurezza bianca che rappresenta l'accesso sicuro</p>
+            </div>
+            <div class="feature">
+                <h3>✨ Effetti Speciali</h3>
+                <p>Animazione di brillantezza e ombre per un look professionale</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadIcon(size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // Gradiente di sfondo
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#8B5CF6');
+            gradient.addColorStop(0.5, '#EC4899');
+            gradient.addColorStop(1, '#3B82F6');
+            
+            // Sfondo con bordi arrotondati
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            const radius = size * 0.2;
+            ctx.roundRect(0, 0, size, size, radius);
+            ctx.fill();
+            
+            // Effetto brillantezza
+            const shineGradient = ctx.createLinearGradient(0, 0, size, size);
+            shineGradient.addColorStop(0, 'rgba(255,255,255,0.1)');
+            shineGradient.addColorStop(0.5, 'rgba(255,255,255,0.3)');
+            shineGradient.addColorStop(1, 'rgba(255,255,255,0.1)');
+            
+            ctx.fillStyle = shineGradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Disegna il simbolo della chiave bianca
+            drawKeySymbol(ctx, size);
+            
+            // Download
+            const link = document.createElement('a');
+            link.download = `password_manager_icon_${size}x${size}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        function drawKeySymbol(ctx, size) {
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const symbolSize = size * 0.5;
+            
+            // Cerchio esterno (bordo bianco)
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = Math.max(2, size * 0.02);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, symbolSize / 2, 0, 2 * Math.PI);
+            ctx.stroke();
+            
+            // Cerchio interno (riempito bianco)
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, symbolSize * 0.35, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Corpo della chiave (viola)
+            const keyWidth = symbolSize * 0.4;
+            const keyHeight = symbolSize * 0.2;
+            const keyX = centerX - keyWidth / 2;
+            const keyY = centerY - keyHeight / 2;
+            
+            ctx.fillStyle = '#8B5CF6';
+            ctx.beginPath();
+            ctx.roundRect(keyX, keyY, keyWidth, keyHeight, size * 0.01);
+            ctx.fill();
+            
+            // Buco della chiave (bianco)
+            const holeRadius = keyHeight * 0.3;
+            const holeX = keyX + keyWidth * 0.25;
+            const holeY = centerY;
+            
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(holeX, holeY, holeRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Denti della chiave (bianchi)
+            const toothWidth = keyWidth * 0.15;
+            const toothHeight = keyHeight * 0.6;
+            
+            // Primo dente
+            const tooth1X = keyX + keyWidth * 0.6;
+            const tooth1Y = centerY - toothHeight / 2;
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.roundRect(tooth1X, tooth1Y, toothWidth, toothHeight, size * 0.005);
+            ctx.fill();
+            
+            // Secondo dente
+            const tooth2X = keyX + keyWidth * 0.8;
+            const tooth2Y = centerY - toothHeight / 2;
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.roundRect(tooth2X, tooth2Y, toothWidth, toothHeight, size * 0.005);
+            ctx.fill();
+        }
+        
+        // Aggiungi supporto per roundRect se non disponibile
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+                this.beginPath();
+                this.moveTo(x + radius, y);
+                this.lineTo(x + width - radius, y);
+                this.quadraticCurveTo(x + width, y, x + width, y + radius);
+                this.lineTo(x + width, y + height - radius);
+                this.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                this.lineTo(x + radius, y + height);
+                this.quadraticCurveTo(x, y + height, x, y + height - radius);
+                this.lineTo(x, y + radius);
+                this.quadraticCurveTo(x, y, x + radius, y);
+                this.closePath();
+            };
+        }
+    </script>
+</body>
+</html> 

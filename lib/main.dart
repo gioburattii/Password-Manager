@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'screens/splash_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -28,7 +29,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6366F1), // Indigo moderno
+          seedColor: const Color(0xFF8B5CF6), // Viola dell'app
           brightness: Brightness.light,
         ),
         appBarTheme: const AppBarTheme(
@@ -66,7 +67,7 @@ class MyApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
+            borderSide: const BorderSide(color: Color(0xFFEC4899), width: 2), // Rosa chiaro
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
@@ -91,7 +92,11 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: AuthWrapper(),
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/auth': (context) => const AuthWrapper(),
+      },
+      initialRoute: '/',
     );
   }
 }
@@ -140,32 +145,40 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     print('Building AuthWrapper...');
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
         print('Auth state changed: ${snapshot.data?.email ?? 'No user'} - Connection: ${snapshot.connectionState}');
         
         if (snapshot.connectionState == ConnectionState.waiting || !_hasCheckedRedirect) {
           print('Showing loading screen...');
-          return const Scaffold(
+            return const Scaffold(
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
+                  CircularProgressIndicator(
+                    color: Color(0xFFEC4899), // Rosa chiaro
+                  ),
                   SizedBox(height: 16),
-                  Text('Caricamento...'),
+                  Text(
+                    'Inizializzazione...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
                 ],
               ),
             ),
-          );
-        } else if (snapshot.hasData) {
+            );
+          } else if (snapshot.hasData) {
           print('User authenticated, showing HomeScreen');
-          return const HomeScreen();
-        } else {
+            return const HomeScreen();
+          } else {
           print('No user, showing AuthScreen');
-          return const AuthScreen();
-        }
-      },
+            return const AuthScreen();
+          }
+        },
     );
   }
 }
