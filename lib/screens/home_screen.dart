@@ -96,6 +96,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     try {
       print('Loading passwords from Firestore for user: $_currentUserId');
       
+      // Test diretto per debug
+      _testDirectQuery();
+      
       _firestore
           .collection('users')
           .doc(_currentUserId)
@@ -108,6 +111,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           for (var doc in querySnapshot.docs) {
             try {
               final data = doc.data();
+              print('Found password document: ${doc.id} - ${data['title']}');
               final entry = PasswordEntry(
                 id: doc.id,
                 title: data['title'] ?? '',
@@ -136,9 +140,76 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       }, onError: (e) {
         print('Error listening to password changes: $e');
+        // Fallback: prova a caricare una volta sola
+        _loadPasswordsOnce();
       });
     } catch (e) {
       print('Error setting up passwords listener: $e');
+      // Fallback: prova a caricare una volta sola
+      _loadPasswordsOnce();
+    }
+  }
+
+  // Metodo di fallback per caricare le password una volta sola
+  Future<void> _loadPasswordsOnce() async {
+    try {
+      print('Trying to load passwords once...');
+      final querySnapshot = await _firestore
+          .collection('users')
+          .doc(_currentUserId)
+          .collection('passwords')
+          .get();
+      
+      final List<PasswordEntry> loadedEntries = [];
+      for (var doc in querySnapshot.docs) {
+        try {
+          final data = doc.data();
+          print('Found password document (once): ${doc.id} - ${data['title']}');
+          final entry = PasswordEntry(
+            id: doc.id,
+            title: data['title'] ?? '',
+            username: data['username'] ?? '',
+            password: data['password'] ?? '',
+            notes: data['notes'] ?? '',
+            createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            imageUrl: null,
+          );
+          loadedEntries.add(entry);
+        } catch (e) {
+          print('Error parsing password entry (once): $e');
+        }
+      }
+      
+      if (mounted) {
+    setState(() {
+          _entries.clear();
+          _entries.addAll(loadedEntries);
+        });
+      }
+      
+      print('Loaded ${loadedEntries.length} passwords (once)');
+    } catch (e) {
+      print('Error loading passwords once: $e');
+    }
+  }
+
+  // Metodo di test per verificare direttamente il database
+  Future<void> _testDirectQuery() async {
+    try {
+      print('Testing direct query...');
+      final querySnapshot = await _firestore
+          .collection('users')
+          .doc(_currentUserId)
+          .collection('passwords')
+          .get();
+      
+      print('Direct query found ${querySnapshot.docs.length} documents');
+      for (var doc in querySnapshot.docs) {
+        print('Document: ${doc.id} - ${doc.data()}');
+      }
+    } catch (e) {
+      print('Direct query error: $e');
     }
   }
 
@@ -338,13 +409,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    // Ottieni le dimensioni dello schermo per layout responsive
+    final screenSize = MediaQuery.of(context).size;
+    final isMobile = screenSize.width < 600;
+    final isSmallMobile = screenSize.width < 400;
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: CustomScrollView(
         slivers: [
-          // Header moderno con gradiente
+          // Header responsive con altezza adattiva
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: isMobile ? 140 : 200, // Ridotto per mobile
             floating: false,
             pinned: true,
             backgroundColor: Colors.transparent,
@@ -363,93 +439,75 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: FlexibleSpaceBar(
                 background: SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(isMobile ? 16 : 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header top row
+                        // Header top row responsive
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Ciao, $_username! 👋',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Ciao, $_username! 👋',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: isMobile ? 20 : 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${_entries.length} password salvate',
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 16,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${_entries.length} password salvate',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: isMobile ? 14 : 16,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                            // Action buttons
+                            // Action buttons responsive
                             Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: IconButton(
-                                    icon: const Icon(
-                                      Icons.analytics_rounded,
-                                      color: Colors.white,
-                                    ),
+                                if (!isSmallMobile) ...[
+                                  _buildActionButton(
+                                    icon: Icons.analytics_rounded,
                                     onPressed: () => _showStatsDialog(),
+                                    isMobile: isMobile,
                                   ),
+                                  SizedBox(width: isMobile ? 6 : 8),
+                                ],
+                                _buildActionButton(
+                                  icon: _obscureText ? Icons.visibility_off : Icons.visibility,
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscureText = !_obscureText;
+                                    });
+                                  },
+                                  isMobile: isMobile,
                                 ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: IconButton(
-                                    icon: Icon(
-                                      _obscureText ? Icons.visibility_off : Icons.visibility,
-                                      color: Colors.white,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _obscureText = !_obscureText;
-                                      });
-                                    },
-          ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: IconButton(
-                                    icon: const Icon(
-                                      Icons.logout_rounded,
-                                      color: Colors.white,
-                                    ),
-                                    onPressed: _logout,
-                                  ),
+                                SizedBox(width: isMobile ? 6 : 8),
+                                _buildActionButton(
+                                  icon: Icons.logout_rounded,
+                                  onPressed: _logout,
+                                  isMobile: isMobile,
                                 ),
                               ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        // Search bar
+                        SizedBox(height: isMobile ? 16 : 20),
+                        // Search bar responsive
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
                             border: Border.all(
                               color: Colors.white.withOpacity(0.3),
                               width: 1,
@@ -466,20 +524,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               hintText: 'Cerca password...',
                               hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
                               prefixIcon: Container(
-                                margin: const EdgeInsets.all(8),
+                                margin: EdgeInsets.all(isMobile ? 6 : 8),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.search_rounded,
                                   color: Colors.white,
+                                  size: isMobile ? 20 : 24,
                                 ),
                               ),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 16,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: isMobile ? 16 : 20,
+                                vertical: isMobile ? 12 : 16,
                               ),
                             ),
                           ),
@@ -492,7 +551,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           
-          // Lista password con animazioni
+          // Lista password con padding responsive
           SliverToBoxAdapter(
             child: _filteredEntries.isEmpty
                 ? _buildEmptyState()
@@ -500,7 +559,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     key: _listKey,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(isMobile ? 16 : 20),
                     initialItemCount: _filteredEntries.length,
                     itemBuilder: (context, index, animation) {
                       if (index >= _filteredEntries.length) return const SizedBox();
@@ -511,13 +570,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ],
       ),
       
-      // FAB con design moderno
+      // FAB responsive
       floatingActionButton: Container(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF3B82F6).withOpacity(0.3),
@@ -530,14 +589,46 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           onPressed: _addPassword,
           backgroundColor: Colors.transparent,
           elevation: 0,
-          icon: const Icon(Icons.add_rounded, color: Colors.white),
-          label: const Text(
+          icon: Icon(
+            Icons.add_rounded, 
+            color: Colors.white,
+            size: isMobile ? 20 : 24,
+          ),
+          label: Text(
             'Aggiungi',
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
+              fontSize: isMobile ? 14 : 16,
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // Widget helper per bottoni responsive
+  Widget _buildActionButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required bool isMobile,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
+      ),
+      child: IconButton(
+        icon: Icon(
+          icon,
+          color: Colors.white,
+          size: isMobile ? 20 : 24,
+        ),
+        onPressed: onPressed,
+        padding: EdgeInsets.all(isMobile ? 8 : 12),
+        constraints: BoxConstraints(
+          minWidth: isMobile ? 40 : 48,
+          minHeight: isMobile ? 40 : 48,
         ),
       ),
     );
@@ -702,16 +793,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final serviceIcon = _getIconForService(entry.title);
     final serviceColor = _getColorForService(entry.title);
     
+    // Ottieni le dimensioni dello schermo per layout responsive
+    final screenSize = MediaQuery.of(context).size;
+    final isMobile = screenSize.width < 600;
+    final isSmallMobile = screenSize.width < 400;
+    
     return SlideTransition(
       position: animation.drive(
         Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
             .chain(CurveTween(curve: Curves.easeOutCubic)),
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: EdgeInsets.only(bottom: isMobile ? 12 : 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -723,10 +819,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
             onTap: () => _editPassword(entry),
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(isMobile ? 16 : 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -737,11 +833,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Hero(
                         tag: 'icon_${entry.id}',
                         child: Container(
-                          width: 48,
-                          height: 48,
+                          width: isMobile ? 40 : 48,
+                          height: isMobile ? 40 : 48,
                           decoration: BoxDecoration(
                             color: serviceColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
                             border: Border.all(
                               color: serviceColor.withOpacity(0.3),
                               width: 1,
@@ -750,12 +846,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: Icon(
                             serviceIcon,
                             color: serviceColor,
-                            size: 24,
+                            size: isMobile ? 20 : 24,
                           ),
                         ),
                       ),
                       
-                      const SizedBox(width: 16),
+                      SizedBox(width: isMobile ? 12 : 16),
                       
                       // Titolo e username
                       Expanded(
@@ -764,20 +860,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           children: [
                             Text(
                               entry.title,
-                              style: const TextStyle(
-                                fontSize: 18,
+                              style: TextStyle(
+                                fontSize: isMobile ? 16 : 18,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F2937),
+                                color: const Color(0xFF1F2937),
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                             if (entry.username.isNotEmpty) ...[
-                              const SizedBox(height: 4),
+                              SizedBox(height: isMobile ? 3 : 4),
                               Text(
                                 entry.username,
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: isMobile ? 12 : 14,
                                   color: Colors.grey.shade600,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ],
@@ -787,7 +885,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       // Menu popup
                       PopupMenuButton(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
                         ),
                         itemBuilder: (context) => [
                           PopupMenuItem(
@@ -835,25 +933,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           }
                         },
                         child: Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: EdgeInsets.all(isMobile ? 6 : 8),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(isMobile ? 6 : 8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.more_vert_rounded,
-                            color: Color(0xFF6B7280),
+                            color: const Color(0xFF6B7280),
+                            size: isMobile ? 18 : 20,
                           ),
                         ),
                       ),
                     ],
                   ),
                   
-                  const SizedBox(height: 16),
+                  SizedBox(height: isMobile ? 12 : 16),
                   
                   // Campo password con design moderno
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(isMobile ? 12 : 16),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -861,7 +960,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           Colors.grey.shade100,
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
                       border: Border.all(
                         color: Colors.grey.shade200,
                         width: 1,
@@ -872,14 +971,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Icon(
                           Icons.lock_rounded,
                           color: Colors.grey.shade500,
-                          size: 20,
+                          size: isMobile ? 18 : 20,
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: isMobile ? 10 : 12),
                         Expanded(
                           child: Text(
                             _obscureText ? '••••••••••••' : entry.password,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: isMobile ? 14 : 16,
                               fontFamily: 'monospace',
                               color: Colors.grey.shade700,
                               fontWeight: FontWeight.w500,
@@ -891,14 +990,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           icon: Icon(
                             Icons.copy_rounded,
                             color: serviceColor,
-                            size: 20,
+                            size: isMobile ? 18 : 20,
+                          ),
+                          padding: EdgeInsets.all(isMobile ? 4 : 8),
+                          constraints: BoxConstraints(
+                            minWidth: isMobile ? 32 : 40,
+                            minHeight: isMobile ? 32 : 40,
                           ),
                         ),
                       ],
                     ),
                   ),
                   
-                  const SizedBox(height: 16),
+                  SizedBox(height: isMobile ? 12 : 16),
                   
                   // Footer con info
                   Row(
@@ -906,10 +1010,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       // Badge forza password
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 8 : 12, 
+                          vertical: isMobile ? 4 : 6
+                        ),
                         decoration: BoxDecoration(
                           color: strengthColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
                           border: Border.all(
                             color: strengthColor.withOpacity(0.3),
                             width: 1,
@@ -921,14 +1028,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Icon(
                               Icons.security_rounded,
                               color: strengthColor,
-                              size: 16,
+                              size: isMobile ? 14 : 16,
                             ),
-                            const SizedBox(width: 6),
+                            SizedBox(width: isMobile ? 4 : 6),
                             Text(
                               strength,
                               style: TextStyle(
                                 color: strengthColor,
-                                fontSize: 12,
+                                fontSize: isMobile ? 10 : 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -940,7 +1047,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Text(
                         'Creato il ${entry.createdAt.day}/${entry.createdAt.month}/${entry.createdAt.year}',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: isMobile ? 10 : 12,
                           color: Colors.grey.shade500,
                         ),
                       ),

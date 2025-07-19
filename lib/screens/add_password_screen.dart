@@ -196,15 +196,20 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
     final currentIcon = _getIconForService(_titleController.text);
     final currentColor = _getColorForService(_titleController.text);
     
+    // Ottieni le dimensioni dello schermo per layout responsive
+    final screenSize = MediaQuery.of(context).size;
+    final isMobile = screenSize.width < 600;
+    final isSmallMobile = screenSize.width < 400;
+    
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Nuova Password',
           style: TextStyle(
-            fontSize: 20,
+            fontSize: isMobile ? 18 : 20,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1F2937),
+            color: const Color(0xFF1F2937),
           ),
         ),
         backgroundColor: Colors.white,
@@ -212,36 +217,40 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_rounded,
-            color: Color(0xFFEC4899), // Rosa chiaro
+            color: const Color(0xFFEC4899), // Rosa chiaro
+            size: isMobile ? 20 : 24,
           ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           if (!_isLoading)
             Container(
-              margin: const EdgeInsets.only(right: 16),
+              margin: EdgeInsets.only(right: isMobile ? 12 : 16),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFFEC4899), Color(0xFF8B5CF6)], // Rosa chiaro + Viola
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
               ),
               child: TextButton(
                 onPressed: _savePassword,
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 16 : 20, 
+                    vertical: isMobile ? 6 : 8
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'Salva',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: isMobile ? 14 : 16,
                   ),
                 ),
               ),
@@ -268,7 +277,7 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
               ),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(isMobile ? 16 : 20),
         child: Form(
           key: _formKey,
           child: Column(
@@ -277,11 +286,11 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
                     // Anteprima icona con animazione
                     Center(
                       child: Container(
-                        width: 100,
-                        height: 100,
+                        width: isMobile ? 80 : 100,
+                        height: isMobile ? 80 : 100,
                         decoration: BoxDecoration(
                           color: currentColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(25),
+                          borderRadius: BorderRadius.circular(isMobile ? 20 : 25),
                           border: Border.all(
                             color: currentColor.withOpacity(0.3),
                             width: 2,
@@ -296,13 +305,13 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
                         ),
                         child: Icon(
                           currentIcon,
-                          size: 50,
+                          size: isMobile ? 40 : 50,
                           color: currentColor,
                         ),
                       ),
                     ),
                     
-                    const SizedBox(height: 16),
+                    SizedBox(height: isMobile ? 12 : 16),
                     
                     // Messaggio educativo
                     Container(
