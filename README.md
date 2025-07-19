@@ -254,11 +254,29 @@ flutter test integration_test/
 - Aggiorna la **documentazione**
 - Mantieni la **sicurezza** come priorità
 
+<<<<<<< HEAD
+=======
+## 📄 Licenza
+
+Questo progetto è rilasciato sotto licenza **MIT**. Vedi il file `LICENSE` per i dettagli.
+
+## 🆘 Supporto
+
+>>>>>>> 32ea2d9 (.)
 ### Problemi Comuni
 - **Errore Firebase**: Verifica la configurazione
 - **Problemi di build**: Pulisci la cache con `flutter clean`
 - **Errori di autenticazione**: Controlla le regole Firestore
 
+<<<<<<< HEAD
+=======
+### Contatti
+- **Issues**: [GitHub Issues](https://github.com/tuousername/password_manager/issues)
+- **Email**: support@passwordmanager.com
+- **Documentazione**: [Wiki del progetto](https://github.com/tuousername/password_manager/wiki)
+
+## 🔄 Changelog
+>>>>>>> 32ea2d9 (.)
 
 ### v1.0.0 (2024)
 - ✅ Autenticazione Google
@@ -267,3 +285,19 @@ flutter test integration_test/
 - ✅ Design Material 3
 - ✅ Supporto multi-piattaforma
 - ✅ Sicurezza avanzata
+<<<<<<< HEAD
+=======
+
+## 🙏 Ringraziamenti
+
+- **Flutter Team** per il framework eccezionale
+- **Firebase** per i servizi cloud
+- **Material Design** per il sistema di design
+- **Comunità open source** per il supporto
+
+---
+
+**⭐ Se ti piace questo progetto, lascia una stella su GitHub!**
+
+*Sviluppato con ❤️ per la sicurezza digitale*
+>>>>>>> 32ea2d9 (.)
