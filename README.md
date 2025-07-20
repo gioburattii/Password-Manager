@@ -151,6 +151,9 @@ lib/
 - **Eliminazione**: Conferma sicura prima della rimozione
 - **Ricerca**: Filtro rapido per trovare password
 - **Copia**: Copia automatica negli appunti
+- **Reset Password**: Funzionalità "Password dimenticata" integrata
+- **Caricamento Ultra Aggressivo**: Sistema di refresh avanzato per garantire visibilità immediata
+- **Refresh Manuale**: Pulsante di refresh per forzare l'aggiornamento della lista
 
 ### 📊 Dashboard
 - **Contatore totale** password
@@ -164,12 +167,33 @@ lib/
 - **Icone personalizzate** per ogni categoria
 - **Layout responsive** per tutti i dispositivi
 
+## 🚀 Nuove Funzionalità
+
+### 🔄 Sistema di Refresh Avanzato
+- **Caricamento Ultra Aggressivo**: Bypass completo del listener Firestore per garantire visibilità immediata
+- **Refresh Manuale**: Pulsante dedicato per forzare l'aggiornamento della lista password
+- **Refresh Automatico**: Trigger automatici quando si torna alla home screen o l'app riprende
+- **Retry Intelligente**: Sistema di retry con 20 tentativi per garantire il caricamento completo
+
+### 🔐 Gestione Password Migliorata
+- **Reset Password**: Funzionalità "Password dimenticata" con dialog professionale
+- **Validazione Email**: Controllo automatico dell'email per il reset
+- **Feedback Utente**: Messaggi informativi per successo ed errori
+- **Gestione Errori**: Gestione completa degli errori di rete e autenticazione
+
+### 🎯 Ottimizzazioni Performance
+- **Caricamento Diretto**: Query dirette a Firestore senza dipendere dai listener
+- **Rebuild Multipli**: Forza multipli aggiornamenti dell'UI per garantire la visibilità
+- **Gestione Lifecycle**: Refresh automatico quando l'app riprende o cambia schermata
+- **Bypass Listener**: Disabilita temporaneamente i listener problematici
+
 ## 🔒 Sicurezza
 
 ### Autenticazione
 - **Google Sign-In** sicuro e affidabile
 - **Sessione persistente** con refresh automatico
 - **Logout sicuro** con pulizia dati locali
+- **Reset Password** integrato con Firebase Auth
 
 ### Dati
 - **Crittografia** tramite Firebase
@@ -225,6 +249,29 @@ flutter test integration_test/
 - Verifica funzionalità cross-platform
 - Controllo performance
 
+## 🔧 Risoluzione Problemi
+
+### Problema: Password non appaiono dopo l'aggiunta
+**Soluzione**: L'app include un sistema di refresh avanzato:
+1. **Pulsante Refresh**: Tocca l'icona refresh nella barra superiore
+2. **Tap Home Screen**: Tocca la home screen per forzare un refresh
+3. **Riavvio App**: Chiudi e riapri l'app per triggerare il refresh automatico
+
+### Problema: Reset password non funziona
+**Soluzione**: 
+1. Verifica che l'email sia corretta
+2. Controlla la casella di posta (anche spam)
+3. Assicurati di avere una connessione internet stabile
+
+### Problema: App non si compila
+**Soluzione**:
+```bash
+flutter clean
+flutter pub get
+cd ios && pod install
+cd .. && flutter build ios --release
+```
+
 ## 📈 Performance
 
 ### Ottimizzazioni
@@ -254,29 +301,12 @@ flutter test integration_test/
 - Aggiorna la **documentazione**
 - Mantieni la **sicurezza** come priorità
 
-<<<<<<< HEAD
-=======
-## 📄 Licenza
 
-Questo progetto è rilasciato sotto licenza **MIT**. Vedi il file `LICENSE` per i dettagli.
-
-## 🆘 Supporto
-
->>>>>>> 32ea2d9 (.)
 ### Problemi Comuni
 - **Errore Firebase**: Verifica la configurazione
 - **Problemi di build**: Pulisci la cache con `flutter clean`
 - **Errori di autenticazione**: Controlla le regole Firestore
 
-<<<<<<< HEAD
-=======
-### Contatti
-- **Issues**: [GitHub Issues](https://github.com/tuousername/password_manager/issues)
-- **Email**: support@passwordmanager.com
-- **Documentazione**: [Wiki del progetto](https://github.com/tuousername/password_manager/wiki)
-
-## 🔄 Changelog
->>>>>>> 32ea2d9 (.)
 
 ### v1.0.0 (2024)
 - ✅ Autenticazione Google
@@ -286,18 +316,4 @@ Questo progetto è rilasciato sotto licenza **MIT**. Vedi il file `LICENSE` per 
 - ✅ Supporto multi-piattaforma
 - ✅ Sicurezza avanzata
 <<<<<<< HEAD
-=======
-
-## 🙏 Ringraziamenti
-
-- **Flutter Team** per il framework eccezionale
-- **Firebase** per i servizi cloud
-- **Material Design** per il sistema di design
-- **Comunità open source** per il supporto
-
----
-
-**⭐ Se ti piace questo progetto, lascia una stella su GitHub!**
-
-*Sviluppato con ❤️ per la sicurezza digitale*
->>>>>>> 32ea2d9 (.)
+======
