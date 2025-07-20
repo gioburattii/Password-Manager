@@ -55,12 +55,21 @@ class _AuthScreenState extends State<AuthScreen> {
           'email': email,
           'name': name,
           'surname': surname,
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastLoginAt': FieldValue.serverTimestamp(),
         });
         
-        // Salva anche in SharedPreferences
+        // Salva anche in SharedPreferences e aggiorna l'UID
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('username', username);
         await prefs.setString('email', email);
+        await prefs.setString('user_uid', userCredential.user!.uid);
+        
+        // Flag per indicare che l'utente si è appena registrato
+        await prefs.setBool('is_new_registration', true);
+        
+        // Chiama _saveUserData per assicurarsi che tutto sia aggiornato
+        await _saveUserData(userCredential.user!);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -215,6 +224,7 @@ class _AuthScreenState extends State<AuthScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('username', user.displayName ?? user.email?.split('@')[0] ?? 'Utente');
       await prefs.setString('email', user.email ?? '');
+      await prefs.setString('user_uid', user.uid);
       
       // Crea o aggiorna il documento utente in Firestore
       await _firestore.collection('users').doc(user.uid).set({
@@ -230,6 +240,160 @@ class _AuthScreenState extends State<AuthScreen> {
     } catch (e) {
       print('Error saving user data: $e');
       // Non blocchiamo il login se il salvataggio fallisce
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    // Mostra un dialog per inserire l'email
+    final TextEditingController emailController = TextEditingController();
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.lock_reset,
+                  color: Color(0xFF8B5CF6),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Reset Password',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Inserisci la tua email per ricevere un link per il reset della password.',
+                style: TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: Icon(Icons.email_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+                validator: (val) => val == null || !val.contains('@')
+                    ? "Inserisci un'email valida"
+                    : null,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Annulla',
+                style: TextStyle(color: Color(0xFF6B7280)),
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B5CF6),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: TextButton(
+                onPressed: () async {
+                  final email = emailController.text.trim();
+                  if (email.isEmpty || !email.contains('@')) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Inserisci un\'email valida'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+                  
+                  Navigator.of(context).pop(email);
+                },
+                child: const Text(
+                  'Invia',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      try {
+        await _auth.sendPasswordResetEmail(email: result);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Email di reset inviata a $result. Controlla la tua casella di posta.',
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        String errorMessage = 'Errore durante l\'invio dell\'email di reset';
+        
+        if (e.toString().contains('user-not-found')) {
+          errorMessage = 'Nessun account trovato con questa email';
+        } else if (e.toString().contains('invalid-email')) {
+          errorMessage = 'Email non valida';
+        } else if (e.toString().contains('too-many-requests')) {
+          errorMessage = 'Troppi tentativi. Attendi qualche minuto e riprova';
+        }
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(errorMessage)),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -398,6 +562,26 @@ class _AuthScreenState extends State<AuthScreen> {
                                   : null,
                               onSaved: (val) => password = val!,
                             ),
+                            
+                            // Link "Password dimenticata" solo per il login
+                            if (isLogin) ...[
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: isLoading ? null : _resetPassword,
+                                  child: Text(
+                                    'Password dimenticata?',
+                                    style: TextStyle(
+                                      color: const Color(0xFF8B5CF6),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                            
                             const SizedBox(height: 32),
                             
                             // Pulsante principale

@@ -44,16 +44,16 @@ def create_key_icon(size, color=(255, 255, 255)):
     key = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(key)
     
-    # Dimensioni della chiave
-    key_size = int(size * 0.4)
+    # Dimensioni della chiave - aumentate per renderla più grande
+    key_size = int(size * 0.6)
     x_offset = (size - key_size) // 2
     y_offset = (size - key_size) // 2
     
     # Disegna la chiave
     # Anello della chiave
-    ring_center_x = x_offset + key_size * 0.3
-    ring_center_y = y_offset + key_size * 0.3
-    ring_radius = key_size * 0.15
+    ring_center_x = x_offset + key_size * 0.25
+    ring_center_y = y_offset + key_size * 0.25
+    ring_radius = key_size * 0.18
     draw.ellipse([
         ring_center_x - ring_radius,
         ring_center_y - ring_radius,
@@ -62,8 +62,8 @@ def create_key_icon(size, color=(255, 255, 255)):
     ], fill=color)
     
     # Asta della chiave
-    shaft_width = key_size * 0.08
-    shaft_length = key_size * 0.6
+    shaft_width = key_size * 0.1
+    shaft_length = key_size * 0.65
     shaft_x = ring_center_x + ring_radius - shaft_width // 2
     shaft_y = ring_center_y
     draw.rectangle([
@@ -72,8 +72,8 @@ def create_key_icon(size, color=(255, 255, 255)):
     ], fill=color)
     
     # Denti della chiave
-    teeth_width = key_size * 0.12
-    teeth_height = key_size * 0.08
+    teeth_width = key_size * 0.15
+    teeth_height = key_size * 0.1
     teeth_x = shaft_x + shaft_length - teeth_width
     teeth_y = shaft_y - teeth_height // 2
     draw.rectangle([
@@ -118,15 +118,15 @@ def create_diamond_with_key(size, gradient_colors):
     temp_key = Image.new('RGBA', (key_size, key_size), (0, 0, 0, 0))
     temp_draw = ImageDraw.Draw(temp_key)
     
-    # Disegna la chiave con gradiente
-    key_actual_size = int(key_size * 0.4)
+    # Disegna la chiave con gradiente - aumentata per renderla più grande
+    key_actual_size = int(key_size * 0.6)
     key_actual_x_offset = (key_size - key_actual_size) // 2
     key_actual_y_offset = (key_size - key_actual_size) // 2
     
     # Anello della chiave
-    ring_center_x = key_actual_x_offset + key_actual_size * 0.3
-    ring_center_y = key_actual_y_offset + key_actual_size * 0.3
-    ring_radius = key_actual_size * 0.15
+    ring_center_x = key_actual_x_offset + key_actual_size * 0.25
+    ring_center_y = key_actual_y_offset + key_actual_size * 0.25
+    ring_radius = key_actual_size * 0.18
     
     # Disegna l'anello con gradiente
     for i in range(int(ring_radius * 2)):
@@ -142,8 +142,8 @@ def create_diamond_with_key(size, gradient_colors):
                 temp_draw.point((x, y), fill=(r, g, b, 255))
     
     # Asta della chiave
-    shaft_width = key_actual_size * 0.08
-    shaft_length = key_actual_size * 0.6
+    shaft_width = key_actual_size * 0.1
+    shaft_length = key_actual_size * 0.65
     shaft_x = ring_center_x + ring_radius - shaft_width // 2
     shaft_y = ring_center_y
     
@@ -159,8 +159,8 @@ def create_diamond_with_key(size, gradient_colors):
         ], fill=(r, g, b, 255))
     
     # Denti della chiave
-    teeth_width = key_actual_size * 0.12
-    teeth_height = key_actual_size * 0.08
+    teeth_width = key_actual_size * 0.15
+    teeth_height = key_actual_size * 0.1
     teeth_x = shaft_x + shaft_length - teeth_width
     teeth_y = shaft_y - teeth_height // 2
     temp_draw.rectangle([

@@ -31,15 +31,15 @@ class DiamondKeyPainter extends CustomPainter {
     final width = size.width;
     final height = size.height;
     
-    // Dimensioni della chiave
-    final keySize = width * 0.4;
+    // Dimensioni della chiave - aumentate per renderla più grande
+    final keySize = width * 0.6;
     final keyX = (width - keySize) / 2;
     final keyY = (height - keySize) / 2;
     
     // Anello della chiave
-    final ringCenterX = keyX + keySize * 0.3;
-    final ringCenterY = keyY + keySize * 0.3;
-    final ringRadius = keySize * 0.15;
+    final ringCenterX = keyX + keySize * 0.25;
+    final ringCenterY = keyY + keySize * 0.25;
+    final ringRadius = keySize * 0.18;
     
     // Disegna l'anello con gradiente
     final ringPaint = Paint()
@@ -60,8 +60,8 @@ class DiamondKeyPainter extends CustomPainter {
     );
     
     // Asta della chiave
-    final shaftWidth = keySize * 0.08;
-    final shaftLength = keySize * 0.6;
+    final shaftWidth = keySize * 0.1;
+    final shaftLength = keySize * 0.65;
     final shaftX = ringCenterX + ringRadius - shaftWidth / 2;
     final shaftY = ringCenterY;
     
@@ -82,8 +82,8 @@ class DiamondKeyPainter extends CustomPainter {
     );
     
     // Denti della chiave
-    final teethWidth = keySize * 0.12;
-    final teethHeight = keySize * 0.08;
+    final teethWidth = keySize * 0.15;
+    final teethHeight = keySize * 0.1;
     final teethX = shaftX + shaftLength - teethWidth;
     final teethY = shaftY - teethHeight / 2;
     

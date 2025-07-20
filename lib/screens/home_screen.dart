@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:password_manager/models/password_entry.dart';
 import 'package:password_manager/screens/add_password_screen.dart';
 import 'package:password_manager/screens/edit_password_screen.dart';
@@ -15,7 +17,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   final List<PasswordEntry> _entries = [];
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
@@ -25,10 +27,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String _username = '';
   String? _currentUserId;
   late AnimationController _logoController;
+  Timer? _healthCheckTimer;
+  bool _isAppActive = true;
 
-  @override
+    @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     
     _logoController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -39,16 +44,67 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (user != null) {
       print('HomeScreen initialized for user: ${user.email}');
       _currentUserId = user.uid;
-    _loadUserData();
-      _loadPasswordsFromFirestore();
+      _loadUserData();
+      _checkNewRegistration();
     } else {
       print('No authenticated user found in HomeScreen');
     }
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && _currentUserId != null) {
+      print('App resumed, forcing ULTRA AGGRESSIVE refresh...');
+      _isAppActive = true;
+      
+      // Disabilita temporaneamente il listener
+      _passwordsSubscription?.cancel();
+      
+      // Usa il caricamento ultra aggressivo
+      _loadPasswordsUltraAggressive();
+      
+      // Riabilita il listener dopo un momento
+      Future.delayed(const Duration(milliseconds: 2000), () {
+        if (mounted && _currentUserId != null) {
+          _loadPasswordsFromFirestore();
+        }
+      });
+    } else if (state == AppLifecycleState.paused) {
+      _isAppActive = false;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Forza un refresh quando torniamo alla home screen
+    if (_currentUserId != null) {
+      print('didChangeDependencies: forcing ULTRA AGGRESSIVE refresh...');
+      
+      // Disabilita temporaneamente il listener
+      _passwordsSubscription?.cancel();
+      
+      // Usa il caricamento ultra aggressivo
+      _loadPasswordsUltraAggressive();
+      
+      // Riabilita il listener dopo un momento
+      Future.delayed(const Duration(milliseconds: 2000), () {
+        if (mounted && _currentUserId != null) {
+          _loadPasswordsFromFirestore();
+        }
+      });
+    }
+  }
+
+
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _logoController.dispose();
+    _passwordsSubscription?.cancel();
+    _healthCheckTimer?.cancel();
     super.dispose();
   }
 
@@ -90,16 +146,58 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _loadPasswordsFromFirestore() {
+  // Metodo per gestire la nuova registrazione
+  Future<void> _checkNewRegistration() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isNewRegistration = prefs.getBool('is_new_registration') ?? false;
+      
+      if (isNewRegistration) {
+        print('New registration detected, using ULTRA aggressive loading...');
+        
+        // Rimuovi il flag
+        await prefs.remove('is_new_registration');
+        
+        // SOLUZIONE RADICALE: Disabilita completamente il listener
+        _passwordsSubscription?.cancel();
+        
+        // Caricamento ultra aggressivo con retry infinito
+        await _loadPasswordsUltraAggressive();
+        
+        // Dopo un momento, attiva il listener normale
+        Future.delayed(const Duration(milliseconds: 2000), () {
+          if (mounted && _currentUserId != null) {
+            _loadPasswordsFromFirestore();
+          }
+        });
+      } else {
+        // Utente esistente, usa il metodo normale
+        print('Existing user, using normal loading...');
+        _loadPasswordsFromFirestore();
+      }
+    } catch (e) {
+      print('Error checking new registration: $e');
+      // Fallback al metodo normale
+      _loadPasswordsFromFirestore();
+    }
+  }
+
+  StreamSubscription<QuerySnapshot>? _passwordsSubscription;
+
+    void _loadPasswordsFromFirestore() {
     if (_currentUserId == null) return;
     
     try {
       print('Loading passwords from Firestore for user: $_currentUserId');
       
+      // Cancella il listener precedente se esiste
+      _passwordsSubscription?.cancel();
+      
       // Test diretto per debug
       _testDirectQuery();
       
-      _firestore
+      // Crea un nuovo listener con gestione errori migliorata
+      _passwordsSubscription = _firestore
           .collection('users')
           .doc(_currentUserId)
           .collection('passwords')
@@ -107,6 +205,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           .snapshots()
           .listen((querySnapshot) {
         try {
+          print('Received Firestore update with ${querySnapshot.docs.length} documents');
           final List<PasswordEntry> loadedEntries = [];
           for (var doc in querySnapshot.docs) {
             try {
@@ -128,36 +227,56 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             }
           }
           
-    setState(() {
-            _entries.clear();
-            _entries.addAll(loadedEntries);
-    });
-          
-          print('Loaded ${loadedEntries.length} passwords from Firestore');
+          if (mounted) {
+            setState(() {
+              _entries.clear();
+              _entries.addAll(loadedEntries);
+            });
+            print('Updated UI with ${loadedEntries.length} passwords from Firestore');
+          }
           
         } catch (e) {
           print('Error processing password entries: $e');
+          // Fallback immediato in caso di errore
+          _loadPasswordsOnce();
         }
       }, onError: (e) {
         print('Error listening to password changes: $e');
         // Fallback: prova a caricare una volta sola
         _loadPasswordsOnce();
+        
+        // Retry automatico dopo 3 secondi
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted && _currentUserId != null) {
+            print('Retrying Firestore listener...');
+            _loadPasswordsFromFirestore();
+          }
+        });
       });
     } catch (e) {
       print('Error setting up passwords listener: $e');
       // Fallback: prova a caricare una volta sola
       _loadPasswordsOnce();
     }
+    
+    // Avvia il health check per monitorare il listener
+    _startHealthCheck();
   }
 
-  // Metodo di fallback per caricare le password una volta sola
+    // Metodo di fallback per caricare le password una volta sola
   Future<void> _loadPasswordsOnce() async {
+    if (_currentUserId == null) {
+      print('Cannot load passwords: no user ID');
+      return;
+    }
+    
     try {
-      print('Trying to load passwords once...');
+      print('Trying to load passwords once for user: $_currentUserId');
       final querySnapshot = await _firestore
           .collection('users')
           .doc(_currentUserId)
           .collection('passwords')
+          .orderBy('title')
           .get();
       
       final List<PasswordEntry> loadedEntries = [];
@@ -182,16 +301,196 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       }
       
       if (mounted) {
-    setState(() {
+        setState(() {
           _entries.clear();
           _entries.addAll(loadedEntries);
         });
+        print('Updated UI with ${loadedEntries.length} passwords (once)');
+        
+        // Forza un rebuild dell'UI
+        if (mounted) {
+          setState(() {});
+        }
+      } else {
+        print('Widget not mounted, skipping UI update');
       }
       
-      print('Loaded ${loadedEntries.length} passwords (once)');
     } catch (e) {
       print('Error loading passwords once: $e');
+      // Prova a ricaricare il listener in caso di errore
+      if (mounted) {
+        _loadPasswordsFromFirestore();
+      }
     }
+  }
+
+  // Metodo ULTRA aggressivo per caricare le password
+  Future<void> _loadPasswordsUltraAggressive() async {
+    if (_currentUserId == null) {
+      print('Cannot load passwords: no user ID');
+      return;
+    }
+    
+    print('ULTRA AGGRESSIVE loading started for user: $_currentUserId');
+    
+    // SOLUZIONE RADICALE: Caricamento diretto senza retry
+    try {
+      print('Loading passwords directly from Firestore...');
+      
+      // Query diretta senza orderBy per evitare problemi di indici
+      final querySnapshot = await _firestore
+          .collection('users')
+          .doc(_currentUserId)
+          .collection('passwords')
+          .get();
+      
+      final List<PasswordEntry> loadedEntries = [];
+      for (var doc in querySnapshot.docs) {
+        try {
+          final data = doc.data();
+          print('Found password: ${doc.id} - ${data['title']}');
+          final entry = PasswordEntry(
+            id: doc.id,
+            title: data['title'] ?? '',
+            username: data['username'] ?? '',
+            password: data['password'] ?? '',
+            notes: data['notes'] ?? '',
+            createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            imageUrl: null,
+          );
+          loadedEntries.add(entry);
+        } catch (e) {
+          print('Error parsing password: $e');
+        }
+      }
+      
+      // Ordina manualmente
+      loadedEntries.sort((a, b) => a.title.compareTo(b.title));
+      
+      print('Loaded ${loadedEntries.length} passwords total');
+      
+      if (mounted) {
+        // Forza un aggiornamento completo
+        setState(() {
+          _entries.clear();
+          _entries.addAll(loadedEntries);
+        });
+        
+        print('UI updated with ${_entries.length} passwords');
+        
+        // Forza multipli rebuild per sicurezza
+        for (int i = 0; i < 10; i++) {
+          Future.delayed(Duration(milliseconds: i * 50), () {
+            if (mounted) {
+              setState(() {});
+              print('Forced rebuild ${i + 1}/10');
+            }
+          });
+        }
+      }
+      
+    } catch (e) {
+      print('Error loading passwords: $e');
+      
+      // Se fallisce, prova a ricaricare il listener
+      if (mounted) {
+        _loadPasswordsFromFirestore();
+      }
+    }
+  }
+
+  // Metodo per verificare la salute del listener
+  void _startHealthCheck() {
+    _healthCheckTimer?.cancel();
+    _healthCheckTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted && _currentUserId != null) {
+        print('Health check: verifying Firestore connection...');
+        _testDirectQuery();
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  // Metodo per forzare un refresh completo
+  Future<void> _forceRefresh() async {
+    print('Forcing complete refresh...');
+    
+    // Cancella tutto
+    _passwordsSubscription?.cancel();
+    _healthCheckTimer?.cancel();
+    
+    // Aspetta un momento
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // Ricarica il listener
+    _loadPasswordsFromFirestore();
+    
+    // Aspetta e ricarica manualmente
+    await Future.delayed(const Duration(milliseconds: 1000));
+    await _loadPasswordsOnce();
+    
+    // Forza un rebuild dell'UI
+    if (mounted) {
+      setState(() {});
+    }
+    
+    // Aspetta ancora e ricarica di nuovo
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _loadPasswordsOnce();
+    
+    // Forza un altro rebuild
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  // Metodo per forzare un refresh COMPLETO dell'intera home screen
+  Future<void> _forceCompleteRefresh() async {
+    print('FORCING COMPLETE REFRESH OF ENTIRE HOME SCREEN...');
+    
+    // Cancella tutto
+    _passwordsSubscription?.cancel();
+    _healthCheckTimer?.cancel();
+    
+    // Pulisci la lista
+    if (mounted) {
+      setState(() {
+        _entries.clear();
+      });
+    }
+    
+    // Aspetta un momento
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    // Carica le password con metodo ultra aggressivo
+    await _loadPasswordsUltraAggressive();
+    
+    // Aspetta e ricarica di nuovo
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _loadPasswordsUltraAggressive();
+    
+    // Aspetta e ricarica ancora una volta
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _loadPasswordsUltraAggressive();
+    
+    // Forza multipli rebuild dell'intera UI
+    for (int i = 0; i < 20; i++) {
+      Future.delayed(Duration(milliseconds: i * 25), () {
+        if (mounted) {
+          setState(() {});
+          print('Complete refresh rebuild ${i + 1}/20');
+        }
+      });
+    }
+    
+    // Riabilita il listener dopo un momento
+    Future.delayed(const Duration(milliseconds: 3000), () {
+      if (mounted && _currentUserId != null) {
+        _loadPasswordsFromFirestore();
+      }
+    });
   }
 
   // Metodo di test per verificare direttamente il database
@@ -212,6 +511,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       print('Direct query error: $e');
     }
   }
+
+
 
   // Sistema icone uniforme super efficiente
   IconData _getIconForService(String title) {
@@ -416,7 +717,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: CustomScrollView(
+      body: GestureDetector(
+        onTap: () {
+          // Forza un refresh quando l'utente tocca la home screen
+          if (_currentUserId != null) {
+            print('Home screen tapped, forcing COMPLETE REFRESH...');
+            
+            // Forza un refresh completo
+            _forceCompleteRefresh();
+          }
+        },
+        child: CustomScrollView(
         slivers: [
           // Header responsive con altezza adattiva
           SliverAppBar(
@@ -439,9 +750,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: FlexibleSpaceBar(
                 background: SafeArea(
                   child: Padding(
-                    padding: EdgeInsets.all(isMobile ? 16 : 20),
+                    padding: EdgeInsets.all(isMobile ? 12 : 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Header top row responsive
                         Row(
@@ -450,22 +762,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     'Ciao, $_username! 👋',
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: isMobile ? 20 : 24,
+                                      fontSize: isMobile ? 18 : 22,
                                       fontWeight: FontWeight.bold,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 2),
                                   Text(
                                     '${_entries.length} password salvate',
                                     style: TextStyle(
                                       color: Colors.white70,
-                                      fontSize: isMobile ? 14 : 16,
+                                      fontSize: isMobile ? 12 : 14,
                                     ),
                                   ),
                                 ],
@@ -481,8 +794,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     onPressed: () => _showStatsDialog(),
                                     isMobile: isMobile,
                                   ),
-                                  SizedBox(width: isMobile ? 6 : 8),
+                                  SizedBox(width: isMobile ? 4 : 6),
                                 ],
+                                _buildActionButton(
+                                  icon: Icons.refresh_rounded,
+                                  onPressed: () {
+                                    print('Manual refresh button pressed - FORCING COMPLETE REFRESH');
+                                    
+                                    // Cancella tutto
+                                    _passwordsSubscription?.cancel();
+                                    _healthCheckTimer?.cancel();
+                                    
+                                    // Forza un refresh completo
+                                    _forceCompleteRefresh();
+                                  },
+                                  isMobile: isMobile,
+                                ),
+                                SizedBox(width: isMobile ? 4 : 6),
                                 _buildActionButton(
                                   icon: _obscureText ? Icons.visibility_off : Icons.visibility,
                                   onPressed: () {
@@ -492,7 +820,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   },
                                   isMobile: isMobile,
                                 ),
-                                SizedBox(width: isMobile ? 6 : 8),
+                                SizedBox(width: isMobile ? 4 : 6),
                                 _buildActionButton(
                                   icon: Icons.logout_rounded,
                                   onPressed: _logout,
@@ -502,12 +830,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ),
                           ],
                         ),
-                        SizedBox(height: isMobile ? 16 : 20),
+                        SizedBox(height: isMobile ? 12 : 16),
                         // Search bar responsive
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+                            borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
                             border: Border.all(
                               color: Colors.white.withOpacity(0.3),
                               width: 1,
@@ -519,26 +847,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 _searchQuery = value;
                               });
                             },
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(color: Color(0xFFEC4899)), // Fucsia
                             decoration: InputDecoration(
                               hintText: 'Cerca password...',
-                              hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                              hintStyle: TextStyle(color: Color(0xFFEC4899).withOpacity(0.7)), // Fucsia
                               prefixIcon: Container(
-                                margin: EdgeInsets.all(isMobile ? 6 : 8),
+                                margin: EdgeInsets.all(isMobile ? 4 : 6),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
+                                  borderRadius: BorderRadius.circular(isMobile ? 6 : 8),
                                 ),
                                 child: Icon(
                                   Icons.search_rounded,
-                                  color: Colors.white,
-                                  size: isMobile ? 20 : 24,
+                                  color: Color(0xFFEC4899), // Fucsia
+                                  size: isMobile ? 18 : 20,
                                 ),
                               ),
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(
-                                horizontal: isMobile ? 16 : 20,
-                                vertical: isMobile ? 12 : 16,
+                                horizontal: isMobile ? 12 : 16,
+                                vertical: isMobile ? 10 : 14,
                               ),
                             ),
                           ),
@@ -559,7 +887,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     key: _listKey,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.all(isMobile ? 16 : 20),
+                    padding: EdgeInsets.all(isMobile ? 12 : 16),
                     initialItemCount: _filteredEntries.length,
                     itemBuilder: (context, index, animation) {
                       if (index >= _filteredEntries.length) return const SizedBox();
@@ -569,6 +897,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
+      ),
       
       // FAB responsive
       floatingActionButton: Container(
@@ -576,12 +905,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           gradient: const LinearGradient(
             colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
           ),
-          borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+          borderRadius: BorderRadius.circular(isMobile ? 14 : 18),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF3B82F6).withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -592,14 +921,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           icon: Icon(
             Icons.add_rounded, 
             color: Colors.white,
-            size: isMobile ? 20 : 24,
+            size: isMobile ? 18 : 20,
           ),
           label: Text(
             'Aggiungi',
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: isMobile ? 14 : 16,
+              fontSize: isMobile ? 13 : 15,
             ),
           ),
         ),
@@ -616,19 +945,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
+        borderRadius: BorderRadius.circular(isMobile ? 6 : 8),
       ),
       child: IconButton(
         icon: Icon(
           icon,
           color: Colors.white,
-          size: isMobile ? 20 : 24,
+          size: isMobile ? 18 : 20,
         ),
         onPressed: onPressed,
-        padding: EdgeInsets.all(isMobile ? 8 : 12),
+        padding: EdgeInsets.all(isMobile ? 6 : 8),
         constraints: BoxConstraints(
-          minWidth: isMobile ? 40 : 48,
-          minHeight: isMobile ? 40 : 48,
+          minWidth: isMobile ? 36 : 40,
+          minHeight: isMobile ? 36 : 40,
         ),
       ),
     );
@@ -1144,7 +1473,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     
     if (result == true) {
-      // Password aggiunta con successo
+      // Password aggiunta con successo, ricarica la lista
+      print('Password added successfully, using ULTRA AGGRESSIVE refresh...');
+      
+      // SOLUZIONE RADICALE: Bypass completo del listener
+      _passwordsSubscription?.cancel();
+      
+      // Aspetta un momento per permettere a Firestore di sincronizzare
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      // Usa il caricamento ultra aggressivo
+      await _loadPasswordsUltraAggressive();
+      
+      // Riabilita il listener dopo il caricamento
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted && _currentUserId != null) {
+          _loadPasswordsFromFirestore();
+        }
+      });
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
@@ -1179,7 +1526,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
     
-    if (result == true) {
+        if (result == true) {
+      // Password modificata con successo, ricarica la lista
+      print('Password edited successfully, refreshing list...');
+      
+      // Aspetta un momento per permettere a Firestore di sincronizzare
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Prova prima il listener, poi il fallback
+      await _loadPasswordsOnce();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
@@ -1247,6 +1603,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             .collection('passwords')
             .doc(entry.id)
             .delete();
+        
+        // Ricarica la lista dopo l'eliminazione
+        print('Password deleted successfully, refreshing list...');
+        
+        // Aspetta un momento per permettere a Firestore di sincronizzare
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        // Prova prima il listener, poi il fallback
+        await _loadPasswordsOnce();
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1348,8 +1713,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     
     if (confirmed == true) {
       await FirebaseAuth.instance.signOut();
+    }
   }
-}
 }
 
 

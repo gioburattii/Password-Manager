@@ -7,9 +7,22 @@ import os
 from PIL import Image, ImageDraw, ImageFont
 
 def create_gradient_icon(size):
-    """Crea un'icona con gradiente e simbolo del lucchetto"""
+    """Crea un'icona con gradiente e logo con chiave"""
     
-    # Crea un'immagine con sfondo trasparente
+    # Carica il logo con la chiave più grande
+    try:
+        # Prova a caricare il logo 512x512 e ridimensionarlo
+        logo_path = 'assets/logo_512x512.png'
+        if os.path.exists(logo_path):
+            logo = Image.open(logo_path).convert('RGBA')
+            logo = logo.resize((size, size), Image.Resampling.LANCZOS)
+            return logo
+        else:
+            print(f"⚠️ Logo non trovato: {logo_path}")
+    except Exception as e:
+        print(f"⚠️ Errore nel caricare il logo: {e}")
+    
+    # Fallback: crea un'icona con gradiente e simbolo del lucchetto
     img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     

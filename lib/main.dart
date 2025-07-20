@@ -110,6 +110,7 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _hasCheckedRedirect = false;
+  String? _currentUserUid;
 
   @override
   void initState() {
@@ -149,6 +150,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
         builder: (context, snapshot) {
         print('Auth state changed: ${snapshot.data?.email ?? 'No user'} - Connection: ${snapshot.connectionState}');
         
+        // Gestisci il cambio di utente
+        if (snapshot.hasData && snapshot.data!.uid != _currentUserUid) {
+          _currentUserUid = snapshot.data!.uid;
+          _clearOldUserData();
+        } else if (!snapshot.hasData && _currentUserUid != null) {
+          _currentUserUid = null;
+          _clearOldUserData();
+        }
+        
         if (snapshot.connectionState == ConnectionState.waiting || !_hasCheckedRedirect) {
           print('Showing loading screen...');
             return const Scaffold(
@@ -180,6 +190,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
           }
         },
     );
+  }
+
+  Future<void> _clearOldUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('username');
+      await prefs.remove('email');
+      await prefs.remove('user_uid');
+      print('Old user data cleared');
+    } catch (e) {
+      print('Error clearing old user data: $e');
+    }
   }
 }
 
